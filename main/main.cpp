@@ -30,11 +30,23 @@ void safetyTask(void* args) {
 }
 
 void motorTask(void* args) {
+    int64_t high_current_time = esp_timer_get_time(); 
+
     while (true) {
         motorBox.loopFOC();
         motorBox.move();
         motorBrake.loopFOC();
-        motorBrake.move(brakeMotorTorque);
+
+        if (brakeMotorTorque < 5.5) {
+            high_current_time = esp_timer_get_time();
+        }
+
+        if (esp_timer_get_time() - high_current_time > 5000000 && gearbox_state == GM_READY) {
+            motorBrake.move(4);
+        }
+        else {
+            motorBrake.move(brakeMotorTorque);
+        }
     }
 }
 
@@ -48,8 +60,6 @@ extern "C" void app_main(void) {
     initMotorBox();
 
     setBrakeTorque(0.7);
-
-    
 
     xTaskCreatePinnedToCore(motorTask, "Motor task", 8192, NULL, 99, NULL, 1);
     xTaskCreate(gearbox_task, "Gearbox task", 8192, NULL, 5, NULL);

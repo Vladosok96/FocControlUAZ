@@ -299,30 +299,6 @@ esp_err_t general_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-esp_err_t api_handler(httpd_req_t *req) {
-    size_t buf_len = httpd_req_get_url_query_len(req) + 1;
-    if (buf_len > 1) {
-        char*  buf;
-        buf = (char*)malloc(buf_len);
-        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-            lastCommandTime = esp_timer_get_time();
-            ESP_LOGI(TAG, "Found URL query => %s", buf);
-            char param[50];
-            if (httpd_query_key_value(buf, "brake", param, sizeof(param)) == ESP_OK) {
-                float brakeTorque = std::stof(param);
-                setBrakeTorque(brakeTorque);
-            }
-            if (httpd_query_key_value(buf, "gear", param, sizeof(param)) == ESP_OK) {
-                int gear = std::stoi(param);
-                if (gear >= 0 && gear < 4)
-                    set_gear(gear);
-            }          
-        }
-    }
-    httpd_resp_send(req, "OK", HTTPD_RESP_USE_STRLEN);
-    return ESP_OK;
-}
-
 esp_err_t start_web_server() {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     httpd_handle_t server = NULL;
@@ -377,15 +353,6 @@ esp_err_t start_web_server() {
         .user_ctx = NULL
     };
     httpd_register_uri_handler(server, &js);
-
-    httpd_uri_t api_uri = {
-        .uri       = "/api",
-        .method    = HTTP_GET,
-        .handler   = api_handler,
-        .user_ctx  = NULL
-    };
-
-    httpd_register_uri_handler(server, &api_uri);
 
     httpd_uri_t getSystem = {
         .uri = "/web/system.json",
